@@ -1,13 +1,16 @@
 import marimo
 
-__generated_with = "0.23.5"
+__generated_with = "0.23.8"
 app = marimo.App(width="full")
 
 
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    This script reads a CSV database of companies and their AI-related news sources, then automatically fetches every URL to check whether it's reachable and scrape its text content, producing a single interactive table with all the original columns. Above the table, two controls let you search the data in real time: a relevance dropdown that filters by whether a source is flagged for AI augmentation, automation impact, both, or all, and a URL status dropdown that shows only reachable, broken, or skipped links. The table is also searchable with a
+    # AI Workplace Policy — BERTopic Analysis
+    
+    This notebook runs BERTopic Analsysis on the scraped text from the AI Workplace database. BERTopic is a powerful topic modeling technique that groups documents into topics based on their semantic content. It uses advanced language models to understand the meaning of the text, then clusters similar documents together and identifies the most representative words for each topic. This helps us uncover the main themes and trends in how AI is being discussed in the workplace across different companies and sources.
+    Run using: uv run marimo edit "BERTOPIC Table.py" --no-sandbox
     """)
     return
 
@@ -20,7 +23,7 @@ def _():
     import concurrent.futures
     from bs4 import BeautifulSoup
 
-    INPUT_FILE = "/Users/mobinariazi/Downloads/AI Workplace database.csv"
+    INPUT_FILE = "AI Workplace database.csv"
     COLUMNS = [
         "Company name",
         "Fortune 100/500 rank",
@@ -186,6 +189,14 @@ def _(
 
     mo.vstack(_items)
     return (filtered,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    BERTopic reads every scraped article and converts it into a set of numbers that capture its meaning, then groups articles that are mathematically close together into topics. It then maps similar articles into neighborhoods — BERTopic draws the boundaries around those neighborhoods and calls each one a topic. It then looks at which words appear most uniquely in each cluster to generate a label.
+    """)
+    return
 
 
 @app.cell
