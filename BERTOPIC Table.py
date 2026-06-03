@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.23.8"
+__generated_with = "0.23.5"
 app = marimo.App(width="full")
 
 
@@ -205,6 +205,9 @@ def _(mo, run_bertopic):
 
 @app.cell
 def _(filtered, mo, run_bertopic):
+    import sys
+    sys.path.insert(0, "/Users/mobinariazi/SocialMediaLab/pythonProject/.venv/lib/python3.12/site-packages")
+
     from umap import UMAP as _UMAP
     from hdbscan import HDBSCAN as _HDBSCAN
     from sentence_transformers import SentenceTransformer as _ST
