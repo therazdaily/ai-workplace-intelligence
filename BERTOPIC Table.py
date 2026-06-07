@@ -325,10 +325,7 @@ def _(get_ran, mo):
 @app.cell
 def _(get_ran, mo, model, n_found, n_words_bar):
     mo.stop(not get_ran())
-    try:
-        model.visualize_barchart(top_n_topics=n_found, n_words=n_words_bar.value)
-    except Exception as e:
-        mo.md(f"Could not render bar chart — not enough topics. (`{e}`)")
+    model.visualize_barchart(top_n_topics=n_found, n_words=n_words_bar.value)
     return
 
 
@@ -353,10 +350,7 @@ def _(get_ran, mo):
 @app.cell
 def _(get_ran, mo, model, top_n_dist):
     mo.stop(not get_ran())
-    try:
-        model.visualize_topics(top_n_topics=top_n_dist.value)
-    except Exception as e:
-        mo.md(f"Could not render intertopic distance map — not enough topics. Try reducing **Min cluster size** or increasing the dataset. (`{e}`)")
+    model.visualize_topics(top_n_topics=top_n_dist.value)
     return
 
 
@@ -381,10 +375,7 @@ def _(get_ran, mo):
 @app.cell
 def _(get_ran, mo, model, top_n_heat):
     mo.stop(not get_ran())
-    try:
-        model.visualize_heatmap(top_n_topics=top_n_heat.value)
-    except Exception as e:
-        mo.md(f"Could not render heatmap — not enough topics. (`{e}`)")
+    model.visualize_heatmap(top_n_topics=top_n_heat.value)
     return
 
 
@@ -409,10 +400,7 @@ def _(get_ran, mo):
 @app.cell
 def _(docs, get_ran, mo, model, sample_docs):
     mo.stop(not get_ran())
-    try:
-        model.visualize_documents(docs, custom_labels=True, sample=sample_docs.value)
-    except Exception as e:
-        mo.md(f"Could not render document map. (`{e}`)")
+    model.visualize_documents(docs, custom_labels=True, sample=sample_docs.value)
     return
 
 
