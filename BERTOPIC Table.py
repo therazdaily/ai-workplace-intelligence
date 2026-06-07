@@ -9,8 +9,9 @@ def _(mo):
     mo.md(r"""
     # AI Workplace Policy — BERTopic Analysis
 
-    This notebook runs BERTopic Analsysis on the scraped text from the AI Workplace database. BERTopic is a powerful topic modeling technique that groups documents into topics based on their semantic content. It uses advanced language models to understand the meaning of the text, then clusters similar documents together and identifies the most representative words for each topic. This helps us uncover the main themes and trends in how AI is being discussed in the workplace across different companies and sources.
-    Run using: uv run marimo edit "BERTOPIC Table.py" --no-sandbox
+    This notebook runs BERTopic Analysis on the scraped text from the AI Workplace database. BERTopic is a powerful topic modeling technique that groups documents into topics based on their semantic content. It uses advanced language models to understand the meaning of the text, then clusters similar documents together and identifies the most representative words for each topic. This helps us uncover the main themes and trends in how AI is being discussed in the workplace across different companies and sources.
+
+    Run using: `uv run marimo edit "BERTOPIC Table.py" --no-sandbox`
     """)
     return
 
@@ -34,7 +35,6 @@ def _():
         "Relevant to Automation Impact?",
     ]
 
-    # ── Load CSV ──────────────────────────────────────────────────────────────
     try:
         _raw = pd.read_csv(INPUT_FILE, dtype=str).fillna("")
     except FileNotFoundError:
@@ -54,7 +54,6 @@ def _():
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         }
 
-        # Step 1: HEAD for status
         status = "[broken] failed"
         try:
             head = requests.head(url, headers=headers, timeout=8, allow_redirects=True, verify=True)
@@ -68,16 +67,13 @@ def _():
         except Exception as e:
             status = f"[broken] {str(e)[:60]}"
 
-        # Skip scraping if broken or skipped
         if status.startswith("[broken]") or status.startswith("[skip]"):
             return url, status, ""
 
-        # Step 2: GET to scrape text
         text = ""
         try:
             resp = requests.get(url, headers=headers, timeout=10, allow_redirects=True, verify=True)
             content_type = resp.headers.get("Content-Type", "")
-
             if "pdf" in content_type.lower() or url.lower().endswith(".pdf"):
                 import fitz
                 import io
@@ -89,12 +85,10 @@ def _():
                 for tag in soup(["script", "style", "nav", "footer", "header"]):
                     tag.decompose()
                 text = " ".join(soup.get_text(separator=" ").split())[:2000]
-
         except Exception:
             try:
                 resp = requests.get(url, headers=headers, timeout=10, allow_redirects=True, verify=False)
                 content_type = resp.headers.get("Content-Type", "")
-
                 if "pdf" in content_type.lower() or url.lower().endswith(".pdf"):
                     import fitz
                     import io
@@ -105,12 +99,12 @@ def _():
                     soup = BeautifulSoup(resp.text, "html.parser")
                     for tag in soup(["script", "style", "nav", "footer", "header"]):
                         tag.decompose()
-                    text = " ".join(soup.get_text(separator=" ").split())[:10000]
-
+                    text = " ".join(soup.get_text(separator=" ").split())[:2000]
             except Exception as e:
                 text = f"[could not scrape: {str(e)[:60]}]"
 
         return url, status, text
+
     _all_urls = df["Source URL"].tolist() if "Source URL" in df.columns else []
     _urls = list(dict.fromkeys(u for u in _all_urls if isinstance(u, str) and u.strip()))
     empty_count = sum(1 for u in _all_urls if not isinstance(u, str) or not u.strip())
@@ -120,7 +114,6 @@ def _():
 
     result_df = pd.DataFrame(_results, columns=["Source URL", "Status", "Scraped Text"])
 
-    # ── Merge into main df — Status next to Source URL, Scraped Text last ─────
     merged_df = df.merge(result_df, on="Source URL", how="left")
     merged_df["Status"] = merged_df["Status"].fillna("not checked")
     merged_df["Scraped Text"] = merged_df["Scraped Text"].fillna("")
@@ -130,7 +123,6 @@ def _():
     _ordered = _cols[:_url_idx + 1] + ["Status"] + _cols[_url_idx + 1:] + ["Scraped Text"]
     merged_df = merged_df[_ordered]
 
-    # ── Controls ──────────────────────────────────────────────────────────────
     relevance_filter = mo.ui.dropdown(
         options=["All", "Augmentation only", "Automation only", "Both"],
         value="All",
@@ -164,7 +156,6 @@ def _(
     result_df,
     status_filter,
 ):
-    # ── Filter logic ──────────────────────────────────────────────────────────
     filtered = merged_df.copy()
 
     _ai_col   = "Relevant to Internal AI Workflow Use/Aug?"
@@ -191,13 +182,11 @@ def _(
     if status_filter.value != "All":
         filtered = filtered[filtered["Status"].str.startswith(f"[{status_filter.value}]")]
 
-    # ── Summary ───────────────────────────────────────────────────────────────
     _ok   = result_df["Status"].str.startswith("[ok]").sum()
     _warn = result_df["Status"].str.startswith("[skip]").sum()
     _bad  = result_df["Status"].str.startswith("[broken]").sum()
     _empty_note = f" + {empty_count} rows with no URL" if empty_count else ""
 
-    # ── Render ────────────────────────────────────────────────────────────────
     _items = []
     if missing:
         _items.append(mo.callout(
@@ -256,7 +245,7 @@ def _(filtered, mo, run_bertopic):
     docs_df = filtered[
         (filtered["Scraped Text"].str.strip().str.split().str.len() > 20) &
         (~filtered["Scraped Text"].str.strip().str.startswith("["))
-        ].copy().reset_index(drop=True)
+    ].copy().reset_index(drop=True)
 
     docs = docs_df["Scraped Text"].tolist()
 
@@ -270,9 +259,9 @@ def _(filtered, mo, run_bertopic):
         "com", "block", "blocking", "loading", "click",
         "please", "accept", "decline", "consent", "gdpr", "ccpa",
         "password", "username", "forgot",
-        "copyright", "reserved", "rights", "inc", "llc", "ltd", "stream", "ip", "site", "page", "javascript, ""js",
+        "copyright", "reserved", "rights", "inc", "llc", "ltd",
+        "stream", "ip", "site", "page", "javascript", "js",
         "reuters", "bloomberg", "reload", "refresh",
-
     ]
     _all_stopwords = list(ENGLISH_STOP_WORDS) + _custom_stopwords
 
@@ -304,28 +293,25 @@ def _(filtered, mo, run_bertopic):
 def _(docs_df, get_ran, info, mo):
     mo.stop(not get_ran())
 
+    _available_cols = [c for c in ["Company Name", "Source URL", "Topic", "Topic Label"] if c in docs_df.columns]
+
     mo.vstack([
         mo.md("### Topic Overview"),
         mo.ui.table(info[["Topic","Name","Count","Representation"]], selection=None, pagination=True, page_size=15),
         mo.md("### Documents by Topic"),
-        mo.ui.table(docs_df[["Company Name","Source URL","Topic","Topic Label"]], selection=None, pagination=True, page_size=20),
+        mo.ui.table(docs_df[_available_cols], selection=None, pagination=True, page_size=20),
     ])
     return
 
 
-app._unparsable_cell(
-    r"""
-    mo.stop(not get_ran())
+@app.cell
+def _(get_ran, mo):
     mo.stop(not get_ran())
     mo.vstack([
-        mo.md("### Intertopic Distance Map"),
-        mo.md("A 2D scatter plot showing how topics relate to each other in semantic space. Topics that are close together share similar language. The slider controls how many topics are plotted."),
-    ])    mo.md("### Top Words per Topic"),
-        mo.md("A bar chart showing the most representative words for each topic. The slider controls how many words are shown per topic — drag it up to see more keywords, down to focus on the strongest ones.")
+        mo.md("### Top Words per Topic"),
+        mo.md("A bar chart showing the most representative words for each topic. The slider controls how many words are shown per topic — drag it up to see more keywords, down to focus on the strongest ones."),
     ])
-    """,
-    name="_"
-)
+    return
 
 
 @app.cell
@@ -339,7 +325,10 @@ def _(get_ran, mo):
 @app.cell
 def _(get_ran, mo, model, n_found, n_words_bar):
     mo.stop(not get_ran())
-    model.visualize_barchart(top_n_topics=n_found, n_words=n_words_bar.value)
+    try:
+        model.visualize_barchart(top_n_topics=n_found, n_words=n_words_bar.value)
+    except Exception as e:
+        mo.md(f"Could not render bar chart — not enough topics. (`{e}`)")
     return
 
 
@@ -364,7 +353,10 @@ def _(get_ran, mo):
 @app.cell
 def _(get_ran, mo, model, top_n_dist):
     mo.stop(not get_ran())
-    model.visualize_topics(top_n_topics=top_n_dist.value)
+    try:
+        model.visualize_topics(top_n_topics=top_n_dist.value)
+    except Exception as e:
+        mo.md(f"Could not render intertopic distance map — not enough topics. Try reducing **Min cluster size** or increasing the dataset. (`{e}`)")
     return
 
 
@@ -389,7 +381,10 @@ def _(get_ran, mo):
 @app.cell
 def _(get_ran, mo, model, top_n_heat):
     mo.stop(not get_ran())
-    model.visualize_heatmap(top_n_topics=top_n_heat.value)
+    try:
+        model.visualize_heatmap(top_n_topics=top_n_heat.value)
+    except Exception as e:
+        mo.md(f"Could not render heatmap — not enough topics. (`{e}`)")
     return
 
 
@@ -414,7 +409,10 @@ def _(get_ran, mo):
 @app.cell
 def _(docs, get_ran, mo, model, sample_docs):
     mo.stop(not get_ran())
-    model.visualize_documents(docs, custom_labels=True, sample=sample_docs.value)
+    try:
+        model.visualize_documents(docs, custom_labels=True, sample=sample_docs.value)
+    except Exception as e:
+        mo.md(f"Could not render document map. (`{e}`)")
     return
 
 

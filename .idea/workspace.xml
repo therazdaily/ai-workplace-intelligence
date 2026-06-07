@@ -4,20 +4,20 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="961c6dc4-7eb0-4cb9-ba0d-9197f4a73e1f" name="Changes" comment="">
-      <changelist_data name="mobina riazi" email="mobinariazi@therazdaily.local" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+    <list default="true" id="961c6dc4-7eb0-4cb9-ba0d-9197f4a73e1f" name="Changes" comment="Social Media Lab Project">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/BERTOPIC Table.py" beforeDir="false" afterPath="$PROJECT_DIR$/BERTOPIC Table.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/NER Table.py" beforeDir="false" afterPath="$PROJECT_DIR$/NER Table.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/uv.lock" beforeDir="false" afterPath="$PROJECT_DIR$/uv.lock" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ChangesViewManager">
+    <option name="groupingKeys">
+      <option value="directory" />
+    </option>
   </component>
   <component name="CopilotPersistence">
     <persistenceIdMap>
@@ -32,6 +32,11 @@
     </option>
   </component>
   <component name="Git.Settings">
+    <option name="PREVIOUS_COMMIT_AUTHORS">
+      <list>
+        <option value="riazim &lt;mobinasriazi@gmail.com&gt;" />
+      </list>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="GitHubPullRequestSearchHistory">{
@@ -55,18 +60,18 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Python.BERT SEEDED.executor&quot;: &quot;Run&quot;,
-    &quot;Python.BERTopic Analysis.executor&quot;: &quot;Run&quot;,
-    &quot;Python.BETopic Analysis.executor&quot;: &quot;Run&quot;,
-    &quot;Python.NER Table.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.github.copilot.settings.ApplicationConfigurable&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python.BERT SEEDED.executor": "Run",
+    "Python.BERTopic Analysis.executor": "Run",
+    "Python.BETopic Analysis.executor": "Run",
+    "Python.NER Table.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "git-widget-placeholder": "main",
+    "settings.editor.selected.configurable": "preferences.pluginManager"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
@@ -88,11 +93,64 @@
       <option name="presentableId" value="Default" />
       <updated>1779379680494</updated>
     </task>
+    <task id="LOCAL-00001" summary="Social Media Lab Project">
+      <option name="closed" value="true" />
+      <created>1780791898786</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1780791898786</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Social Media Lab Project">
+      <option name="closed" value="true" />
+      <created>1780792168562</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1780792168562</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Social Media Lab Project">
+      <option name="closed" value="true" />
+      <created>1780792186184</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1780792186184</updated>
+    </task>
+    <task id="LOCAL-00004" summary="Social Media Lab Project">
+      <option name="closed" value="true" />
+      <created>1780792213548</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1780792213548</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Social Media Lab Project">
+      <option name="closed" value="true" />
+      <created>1780792920865</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1780792920865</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="update INPUT_FILE to relative path" />
-    <option name="LAST_COMMIT_MESSAGE" value="update INPUT_FILE to relative path" />
+    <MESSAGE value="Social Media Lab Project" />
+    <option name="LAST_COMMIT_MESSAGE" value="Social Media Lab Project" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>
