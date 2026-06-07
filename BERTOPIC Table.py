@@ -8,7 +8,7 @@ app = marimo.App(width="full")
 def _(mo):
     mo.md(r"""
     # AI Workplace Policy — BERTopic Analysis
-    
+
     This notebook runs BERTopic Analsysis on the scraped text from the AI Workplace database. BERTopic is a powerful topic modeling technique that groups documents into topics based on their semantic content. It uses advanced language models to understand the meaning of the text, then clusters similar documents together and identifies the most representative words for each topic. This helps us uncover the main themes and trends in how AI is being discussed in the workplace across different companies and sources.
     Run using: uv run marimo edit "BERTOPIC Table.py" --no-sandbox
     """)
@@ -25,7 +25,7 @@ def _():
 
     INPUT_FILE = "AI Workplace database.csv"
     COLUMNS = [
-        "Company name",
+        "Company Name",
         "Fortune 100/500 rank",
         "Industry",
         "Source Title",
@@ -47,13 +47,13 @@ def _():
     missing = [c for c in COLUMNS if c not in _raw.columns]
     df = _raw[_present].copy()
 
-    # ── Check status + scrape text ────────────────────────────────────────────
     def check_and_scrape(url):
         if not isinstance(url, str) or not url.strip().startswith("http"):
             return url, "[skip] Not a URL", ""
         headers = {
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         }
+
         # Step 1: HEAD for status
         status = "[broken] failed"
         try:
@@ -68,26 +68,49 @@ def _():
         except Exception as e:
             status = f"[broken] {str(e)[:60]}"
 
+        # Skip scraping if broken or skipped
+        if status.startswith("[broken]") or status.startswith("[skip]"):
+            return url, status, ""
+
         # Step 2: GET to scrape text
         text = ""
         try:
             resp = requests.get(url, headers=headers, timeout=10, allow_redirects=True, verify=True)
-            soup = BeautifulSoup(resp.text, "html.parser")
-            for tag in soup(["script", "style", "nav", "footer", "header"]):
-                tag.decompose()
-            text = " ".join(soup.get_text(separator=" ").split())[:2000]
-        except Exception:
-            try:
-                resp = requests.get(url, headers=headers, timeout=10, allow_redirects=True, verify=False)
+            content_type = resp.headers.get("Content-Type", "")
+
+            if "pdf" in content_type.lower() or url.lower().endswith(".pdf"):
+                import fitz
+                import io
+                doc = fitz.open(stream=io.BytesIO(resp.content), filetype="pdf")
+                text = " ".join(page.get_text() for page in doc)
+                text = " ".join(text.split())[:2000]
+            else:
                 soup = BeautifulSoup(resp.text, "html.parser")
                 for tag in soup(["script", "style", "nav", "footer", "header"]):
                     tag.decompose()
                 text = " ".join(soup.get_text(separator=" ").split())[:2000]
+
+        except Exception:
+            try:
+                resp = requests.get(url, headers=headers, timeout=10, allow_redirects=True, verify=False)
+                content_type = resp.headers.get("Content-Type", "")
+
+                if "pdf" in content_type.lower() or url.lower().endswith(".pdf"):
+                    import fitz
+                    import io
+                    doc = fitz.open(stream=io.BytesIO(resp.content), filetype="pdf")
+                    text = " ".join(page.get_text() for page in doc)
+                    text = " ".join(text.split())[:2000]
+                else:
+                    soup = BeautifulSoup(resp.text, "html.parser")
+                    for tag in soup(["script", "style", "nav", "footer", "header"]):
+                        tag.decompose()
+                    text = " ".join(soup.get_text(separator=" ").split())[:10000]
+
             except Exception as e:
                 text = f"[could not scrape: {str(e)[:60]}]"
 
         return url, status, text
-
     _all_urls = df["Source URL"].tolist() if "Source URL" in df.columns else []
     _urls = list(dict.fromkeys(u for u in _all_urls if isinstance(u, str) and u.strip()))
     empty_count = sum(1 for u in _all_urls if not isinstance(u, str) or not u.strip())
@@ -223,6 +246,7 @@ def _(filtered, mo, run_bertopic):
     from hdbscan import HDBSCAN as _HDBSCAN
     from sentence_transformers import SentenceTransformer as _ST
     from sklearn.feature_extraction.text import CountVectorizer as _CV
+    from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
     from bertopic import BERTopic as _BERTopic
     from bertopic.representation import KeyBERTInspired as _KBI
     from bertopic.vectorizers import ClassTfidfTransformer as _CTF
@@ -230,18 +254,33 @@ def _(filtered, mo, run_bertopic):
     mo.stop(not run_bertopic.value)
 
     docs_df = filtered[
-        filtered["Scraped Text"].str.strip().str.len() > 50
-    ].copy().reset_index(drop=True)
+        (filtered["Scraped Text"].str.strip().str.split().str.len() > 20) &
+        (~filtered["Scraped Text"].str.strip().str.startswith("["))
+        ].copy().reset_index(drop=True)
 
     docs = docs_df["Scraped Text"].tolist()
 
     mo.stop(len(docs) == 0, mo.md("No successfully scraped documents to analyze."))
 
+    _custom_stopwords = [
+        "getty", "images", "disable", "browser",
+        "enable", "subscribe", "subscription", "cookie",
+        "cookies", "paywall", "login", "sign", "account", "register",
+        "advertisement", "advertising", "ad", "sponsored", "blocker",
+        "com", "block", "blocking", "loading", "click",
+        "please", "accept", "decline", "consent", "gdpr", "ccpa",
+        "password", "username", "forgot",
+        "copyright", "reserved", "rights", "inc", "llc", "ltd", "stream", "ip", "site", "page", "javascript, ""js",
+        "reuters", "bloomberg", "reload", "refresh",
+
+    ]
+    _all_stopwords = list(ENGLISH_STOP_WORDS) + _custom_stopwords
+
     model = _BERTopic(
         embedding_model=_ST("all-MiniLM-L6-v2"),
         umap_model=_UMAP(n_neighbors=15, n_components=5, min_dist=0.0, metric="cosine"),
         hdbscan_model=_HDBSCAN(min_cluster_size=5, metric="euclidean", cluster_selection_method="eom", prediction_data=True),
-        vectorizer_model=_CV(stop_words="english"),
+        vectorizer_model=_CV(stop_words=_all_stopwords),
         ctfidf_model=_CTF(),
         representation_model=_KBI(),
         top_n_words=10,
@@ -269,25 +308,24 @@ def _(docs_df, get_ran, info, mo):
         mo.md("### Topic Overview"),
         mo.ui.table(info[["Topic","Name","Count","Representation"]], selection=None, pagination=True, page_size=15),
         mo.md("### Documents by Topic"),
-        mo.ui.table(docs_df[["Company name","Source URL","Topic","Topic Label"]], selection=None, pagination=True, page_size=20),
+        mo.ui.table(docs_df[["Company Name","Source URL","Topic","Topic Label"]], selection=None, pagination=True, page_size=20),
     ])
     return
 
 
-@app.cell
-def _(get_ran, mo):
+app._unparsable_cell(
+    r"""
     mo.stop(not get_ran())
-    mo.md("### Top Words per Topic")
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    Top words per topic:
-    A bar chart showing the most representative words for each topic. The slider controls how many words are shown per topic — drag it up to see more keywords, down to focus on the strongest ones.
-    """)
-    return
+    mo.stop(not get_ran())
+    mo.vstack([
+        mo.md("### Intertopic Distance Map"),
+        mo.md("A 2D scatter plot showing how topics relate to each other in semantic space. Topics that are close together share similar language. The slider controls how many topics are plotted."),
+    ])    mo.md("### Top Words per Topic"),
+        mo.md("A bar chart showing the most representative words for each topic. The slider controls how many words are shown per topic — drag it up to see more keywords, down to focus on the strongest ones.")
+    ])
+    """,
+    name="_"
+)
 
 
 @app.cell
@@ -308,15 +346,10 @@ def _(get_ran, mo, model, n_found, n_words_bar):
 @app.cell
 def _(get_ran, mo):
     mo.stop(not get_ran())
-    mo.md("### Intertopic Distance Map")
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    Intertopic distance map:A 2D scatter plot showing how topics relate to each other in semantic space. Topics that are close together share similar language. The slider controls how many topics are plotted.
-    """)
+    mo.vstack([
+        mo.md("### Intertopic Distance Map"),
+        mo.md("A 2D scatter plot showing how topics relate to each other in semantic space. Topics that are close together share similar language. The slider controls how many topics are plotted."),
+    ])
     return
 
 
@@ -338,15 +371,10 @@ def _(get_ran, mo, model, top_n_dist):
 @app.cell
 def _(get_ran, mo):
     mo.stop(not get_ran())
-    mo.md("### Topic Similarity Heatmap")
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    Topic similarity heatmap: A grid showing pairwise similarity scores between all topics. Darker cells mean two topics share more vocabulary. The slider lets you focus on a subset of topics.
-    """)
+    mo.vstack([
+        mo.md("### Topic Similarity Heatmap"),
+        mo.md("A grid showing pairwise similarity scores between all topics. Darker cells mean two topics share more vocabulary. The slider lets you focus on a subset of topics."),
+    ])
     return
 
 
@@ -368,15 +396,10 @@ def _(get_ran, mo, model, top_n_heat):
 @app.cell
 def _(get_ran, mo):
     mo.stop(not get_ran())
-    mo.md("### Document Map")
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    Document map: Plots every document as a point in 2D space, colored by topic. Good for spotting clusters and outliers. The sample fraction slider lets you render a random subset if you have too many documents to display clearly.
-    """)
+    mo.vstack([
+        mo.md("### Document Map"),
+        mo.md("Plots every document as a point in 2D space, colored by topic. Good for spotting clusters and outliers. The sample fraction slider lets you render a random subset if you have too many documents to display clearly."),
+    ])
     return
 
 

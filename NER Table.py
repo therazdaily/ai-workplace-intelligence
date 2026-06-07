@@ -28,7 +28,7 @@ def _():
 
     INPUT_FILE = "AI Workplace database.csv"
     COLUMNS = [
-        "Company name",
+        "Company Name",
         "Fortune 100/500 rank",
         "Industry",
         "Source Title",
@@ -90,47 +90,55 @@ def _(mo):
 
 
 @app.cell
-def _(mo, run_ner):
-    get_ner_ran, set_ner_ran = mo.state(False)
-    if run_ner.value:
-        set_ner_ran(True)
-    return get_ner_ran, set_ner_ran
-
-
-@app.cell
-def _(df, mo, run_ner, spacy):
+def _(df, mo, pd, run_ner, spacy):
     mo.stop(not run_ner.value)
 
     nlp = spacy.load("en_core_web_trf")
 
     ENTITY_TYPES = ["ORG", "PERSON", "GPE", "DATE", "PRODUCT", "LAW"]
 
+    CUSTOM_STOPWORDS = [
+        "getty", "images", "disable", "browser",
+        "enable", "subscribe", "subscription", "cookie",
+        "cookies", "paywall", "login", "sign", "account", "register",
+        "advertisement", "advertising", "ad", "sponsored", "blocker",
+        "com", "block", "blocking", "loading", "click",
+        "please", "accept", "decline", "consent", "gdpr", "ccpa",
+        "password", "username", "forgot",
+        "copyright", "reserved", "rights", "inc", "llc", "ltd", "stream", "ip", "site", "page", "javascript", "js",
+        "reuters", "bloomberg", "reload", "refresh",
+    ]
+
     _rows = []
     for _, row in df.iterrows():
         text = row.get("Scraped Text", "")
-        if not isinstance(text, str) or len(text.strip()) < 50:
+        if not isinstance(text, str) or len(text.strip()) < 20:
             continue
-        doc = nlp(text[:2000])
+        doc = nlp(text[:10000])
         for ent in doc.ents:
             if ent.label_ in ENTITY_TYPES:
-                _rows.append({
-                    "Company name": row.get("Company name", ""),
-                    "Source URL": row.get("Source URL", ""),
-                    "Industry": row.get("Industry", ""),
-                    "Entity": ent.text.strip(),
-                    "Entity Type": ent.label_,
-                    "Context": text[max(0, ent.start_char - 100):ent.end_char + 100].strip(),
-                })
+                if ent.text.strip().lower() not in CUSTOM_STOPWORDS:
+                    _rows.append({
+                        "Company Name": row.get("Company Name", ""),
+                        "Fortune 100/500 rank": row.get("Fortune 100/500 rank", ""),
+                        "Industry": row.get("Industry", ""),
+                        "Source Title": row.get("Source Title", ""),
+                        "Source URL": row.get("Source URL", ""),
+                        "Relevant to Internal AI Workflow Use/Aug?": row.get(
+                            "Relevant to Internal AI Workflow Use/Aug?", ""),
+                        "Relevant to Automation Impact?": row.get("Relevant to Automation Impact?", ""),
+                        "Entity": ent.text.strip(),
+                        "Entity Type": ent.label_,
+                        "Context": text[max(0, ent.start_char - 100):ent.end_char + 100].strip(),
+                    })
 
     ner_df = pd.DataFrame(_rows)
-
-    mo.md(f"**{len(ner_df):,}** entities extracted from **{len(df):,}** documents.")
-    return ner_df, nlp
+    return (ner_df,)
 
 
 @app.cell
-def _(get_ner_ran, mo, ner_df):
-    mo.stop(not get_ner_ran())
+def _(mo, ner_df, run_ner):
+    mo.stop(not run_ner.value)
 
     entity_filter = mo.ui.dropdown(
         options=["All", "ORG", "PERSON", "GPE", "DATE", "PRODUCT", "LAW"],
@@ -138,7 +146,7 @@ def _(get_ner_ran, mo, ner_df):
         label="Entity Type",
     )
     company_filter = mo.ui.dropdown(
-        options=["All"] + sorted(ner_df["Company name"].unique().tolist()),
+        options=["All"] + sorted(ner_df["Company Name"].unique().tolist()),
         value="All",
         label="Company",
     )
@@ -149,8 +157,8 @@ def _(get_ner_ran, mo, ner_df):
 
 
 @app.cell
-def _(company_filter, entity_filter, get_ner_ran, mo, ner_df, search_entity):
-    mo.stop(not get_ner_ran())
+def _(company_filter, entity_filter, mo, ner_df, run_ner, search_entity):
+    mo.stop(not run_ner.value)
 
     filtered_ner = ner_df.copy()
 
@@ -158,7 +166,7 @@ def _(company_filter, entity_filter, get_ner_ran, mo, ner_df, search_entity):
         filtered_ner = filtered_ner[filtered_ner["Entity Type"] == entity_filter.value]
 
     if company_filter.value != "All":
-        filtered_ner = filtered_ner[filtered_ner["Company name"] == company_filter.value]
+        filtered_ner = filtered_ner[filtered_ner["Company Name"] == company_filter.value]
 
     if search_entity.value:
         filtered_ner = filtered_ner[
@@ -170,8 +178,8 @@ def _(company_filter, entity_filter, get_ner_ran, mo, ner_df, search_entity):
 
 
 @app.cell
-def _(get_ner_ran, mo):
-    mo.stop(not get_ner_ran())
+def _(mo, run_ner):
+    mo.stop(not run_ner.value)
     mo.md("""
     ### All Extracted Entities
     Every entity mention found across all scraped articles. Each row shows the entity, its type, the surrounding context, and which company and source it came from.
@@ -180,10 +188,12 @@ def _(get_ner_ran, mo):
 
 
 @app.cell
-def _(filtered_ner, get_ner_ran, mo):
-    mo.stop(not get_ner_ran())
+def _(filtered_ner, mo, run_ner):
+    mo.stop(not run_ner.value)
     mo.ui.table(
-        filtered_ner[["Company name", "Industry", "Entity", "Entity Type", "Context", "Source URL"]],
+        filtered_ner[["Company Name", "Fortune 100/500 rank", "Industry", "Source Title", "Source URL",
+                      "Relevant to Internal AI Workflow Use/Aug?", "Relevant to Automation Impact?", "Entity",
+                      "Entity Type", "Context"]],
         selection=None,
         pagination=True,
         page_size=25,
@@ -192,8 +202,45 @@ def _(filtered_ner, get_ner_ran, mo):
 
 
 @app.cell
-def _(get_ner_ran, mo):
-    mo.stop(not get_ner_ran())
+def _(mo, run_ner):
+    mo.stop(not run_ner.value)
+    mo.md("""
+    ### Entity Breakdown by Type
+    A count of each entity category found across all documents. Shows whether the coverage skews toward organizations, people, locations, dates, products, or legislation.
+    """)
+    return
+
+
+@app.cell
+def _(filtered_ner, mo, px, run_ner):
+    mo.stop(not run_ner.value)
+
+    breakdown = (
+        filtered_ner.groupby("Entity Type")
+        .size()
+        .reset_index(name="Count")
+        .sort_values("Count", ascending=False)
+    )
+
+    fig_donut = px.pie(
+        breakdown,
+        names="Entity Type",
+        values="Count",
+        hole=0.4,
+        title="Entity Type Distribution",
+        color_discrete_sequence=px.colors.sequential.Blues,
+    )
+
+    mo.vstack([
+        fig_donut,
+        mo.ui.table(breakdown, selection=None, pagination=True, page_size=10),
+    ])
+    return
+
+
+@app.cell
+def _(mo, run_ner):
+    mo.stop(not run_ner.value)
     mo.md("""
     ### Most Frequently Mentioned Entities
     The top 20 entities ranked by how many times they appear across all documents. High frequency entities reveal the key players, places, and products dominating the conversation.
@@ -202,8 +249,8 @@ def _(get_ner_ran, mo):
 
 
 @app.cell
-def _(filtered_ner, get_ner_ran, mo, px):
-    mo.stop(not get_ner_ran())
+def _(filtered_ner, mo, px, run_ner):
+    mo.stop(not run_ner.value)
 
     top_entities = (
         filtered_ner.groupby(["Entity", "Entity Type"])
@@ -220,6 +267,7 @@ def _(filtered_ner, get_ner_ran, mo, px):
         color="Entity Type",
         orientation="h",
         title="Top 20 Most Mentioned Entities",
+        color_discrete_sequence=px.colors.sequential.Blues_r,
         height=600,
     )
     fig_top.update_layout(yaxis={"categoryorder": "total ascending"})
@@ -232,82 +280,8 @@ def _(filtered_ner, get_ner_ran, mo, px):
 
 
 @app.cell
-def _(get_ner_ran, mo):
-    mo.stop(not get_ner_ran())
-    mo.md("""
-    ### Entity Breakdown by Type
-    A count of each entity category found across all documents. Shows whether the coverage skews toward organizations, people, locations, dates, products, or legislation.
-    """)
-    return
-
-
-@app.cell
-def _(filtered_ner, get_ner_ran, mo, px):
-    mo.stop(not get_ner_ran())
-
-    breakdown = (
-        filtered_ner.groupby("Entity Type")
-        .size()
-        .reset_index(name="Count")
-        .sort_values("Count", ascending=False)
-    )
-
-    fig_donut = px.pie(
-        breakdown,
-        names="Entity Type",
-        values="Count",
-        hole=0.4,
-        title="Entity Type Distribution",
-    )
-
-    mo.vstack([
-        fig_donut,
-        mo.ui.table(breakdown, selection=None, pagination=True, page_size=10),
-    ])
-    return
-
-
-@app.cell
-def _(get_ner_ran, mo):
-    mo.stop(not get_ner_ran())
-    mo.md("""
-    ### Entity Breakdown by Company
-    Shows which entity types each Fortune 500 company's sources tend to reference most. Useful for comparing whether a company's coverage is more people-driven, policy-driven, or product-driven.
-    """)
-    return
-
-
-@app.cell
-def _(filtered_ner, get_ner_ran, mo, px):
-    mo.stop(not get_ner_ran())
-
-    by_company = (
-        filtered_ner.groupby(["Company name", "Entity Type"])
-        .size()
-        .reset_index(name="Count")
-        .sort_values("Count", ascending=False)
-    )
-
-    fig_heatmap = px.density_heatmap(
-        by_company,
-        x="Entity Type",
-        y="Company name",
-        z="Count",
-        title="Entity Type by Company",
-        color_continuous_scale="Blues",
-        height=800,
-    )
-
-    mo.vstack([
-        fig_heatmap,
-        mo.ui.table(by_company, selection=None, pagination=True, page_size=25),
-    ])
-    return
-
-
-@app.cell
-def _(get_ner_ran, mo):
-    mo.stop(not get_ner_ran())
+def _(mo, run_ner):
+    mo.stop(not run_ner.value)
     mo.md("""
     ### Top Organizations Mentioned
     The most frequently mentioned organizations across all sources. Reveals which companies, institutions, and agencies are central to the AI workplace conversation.
@@ -316,8 +290,8 @@ def _(get_ner_ran, mo):
 
 
 @app.cell
-def _(filtered_ner, get_ner_ran, mo, px):
-    mo.stop(not get_ner_ran())
+def _(filtered_ner, mo, px, run_ner):
+    mo.stop(not run_ner.value)
 
     top_orgs = (
         filtered_ner[filtered_ner["Entity Type"] == "ORG"]
@@ -348,8 +322,8 @@ def _(filtered_ner, get_ner_ran, mo, px):
 
 
 @app.cell
-def _(get_ner_ran, mo):
-    mo.stop(not get_ner_ran())
+def _(mo, run_ner):
+    mo.stop(not run_ner.value)
     mo.md("""
     ### Top People Mentioned
     The most frequently named individuals across all sources. Shows which executives, politicians, and researchers are most prominent in AI workplace coverage.
@@ -358,8 +332,8 @@ def _(get_ner_ran, mo):
 
 
 @app.cell
-def _(filtered_ner, get_ner_ran, mo, px):
-    mo.stop(not get_ner_ran())
+def _(filtered_ner, mo, px, run_ner):
+    mo.stop(not run_ner.value)
 
     top_persons = (
         filtered_ner[filtered_ner["Entity Type"] == "PERSON"]
@@ -377,7 +351,7 @@ def _(filtered_ner, get_ner_ran, mo, px):
         orientation="h",
         title="Top 20 People Mentioned",
         color="Count",
-        color_continuous_scale="Greens",
+        color_continuous_scale="Blues",
         height=600,
     )
     fig_persons.update_layout(yaxis={"categoryorder": "total ascending"})
